@@ -1,4 +1,3 @@
-
 name: Build ZODIAC APK
 
 on:
@@ -35,16 +34,24 @@ jobs:
         run: |
           set -e
           echo "Checking ZODIAC project..."
+
           for file in main.py zodiac_data.py ui_components.py; do
             if [ ! -f "$file" ]; then
               echo "::error::Missing required file: $file"
               exit 1
             fi
           done
+
           if [ ! -d assets ]; then
             echo "::error::Missing assets directory"
             exit 1
           fi
+
+          if [ ! -f buildozer.spec ]; then
+            echo "::error::buildozer.spec is missing"
+            exit 1
+          fi
+
           echo "Project files found."
 
       - name: Install system dependencies
@@ -61,51 +68,53 @@ jobs:
             libssl-dev cmake \
             libltdl-dev
 
-      - name: Setup Buildozer
+      - name: Setup Python build environment
         shell: bash
         run: |
+          set -e
+
           python3 -m venv .buildenv
-          . .buildenv/bin/activate
-          pip install --upgrade pip setuptools wheel
-          pip install buildozer cython==0.29.36
+          source .buildenv/bin/activate
 
-      - name: Create Buildozer configuration
+          python -m pip install --upgrade \
+            pip setuptools wheel
+
+          pip install \
+            buildozer==1.5.0 \
+            cython==0.29.36
+
+          echo "Build environment:"
+          python --version
+          buildozer --version
+          cython --version
+
+      - name: Verify Android configuration
         shell: bash
         run: |
-          if [ ! -f buildozer.spec ]; then
-            cat > buildozer.spec <<'EOF'
-          [app]
-          title = ZODIAC
-          package.name = zodiac
-          package.domain = com.zodiac
-          source.dir = .
-          source.include_exts = py,png,jpg,jpeg,kv,atlas,ttf,otf,svg,json
-          version = 2.0.0
-          requirements = python3,kivy,arabic-reshaper,python-bidi
-          orientation = portrait
-          fullscreen = 0
-          android.permissions =
-          android.api = 35
-          android.minapi = 23
-          android.archs = arm64-v8a, armeabi-v7a
-          android.accept_sdk_license = True
-          android.debug_artifact = apk
+          set -e
 
-          [buildozer]
-          log_level = 2
-          warn_on_root = 1
-          EOF
-          fi
+          echo "Checking buildozer.spec..."
 
-          echo "Buildozer configuration:"
-          cat buildozer.spec
+          grep -E '^(requirements|android.api|android.minapi|android.ndk|android.archs|p4a.branch)[[:space:]]*=' buildozer.spec
+
+          grep -Eq '^android.archs[[:space:]]*=[[:space:]]*arm64-v8a[[:space:]]*$' buildozer.spec || {
+            echo "::error::Architecture must be arm64-v8a"
+            exit 1
+          }
+
+          grep -Eq '^android.ndk[[:space:]]*=[[:space:]]*25c[[:space:]]*$' buildozer.spec || {
+            echo "::error::Android NDK must be 25c"
+            exit 1
+          }
+
+          echo "Android configuration verified."
 
       - name: Build ZODIAC APK
         shell: bash
         run: |
           set -eux
 
-          . .buildenv/bin/activate
+          source .buildenv/bin/activate
 
           unset CC
           unset CXX
@@ -114,14 +123,8 @@ jobs:
           unset CXXFLAGS
           unset LDFLAGS
 
-          export CC=clang
-          export CXX=clang++
+          echo "Starting ZODIAC Android build..."
 
-          echo "Compiler versions:"
-          clang --version
-          clang++ --version
-
-          echo "Starting ZODIAC build..."
           buildozer -v android debug
 
       - name: Upload APK
@@ -131,4 +134,3 @@ jobs:
           path: bin/*.apk
           if-no-files-found: error
           retention-days: 14
-
