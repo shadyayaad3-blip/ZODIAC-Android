@@ -11,8 +11,6 @@ source.include_patterns = assets/*
 
 version = 2.0.0
 
-p4a.branch = master
-
 requirements = python3,kivy==2.3.1,arabic-reshaper,python-bidi
 
 orientation = portrait
