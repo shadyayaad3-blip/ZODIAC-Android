@@ -18,12 +18,12 @@ requirements = python3,kivy==2.3.1,arabic-reshaper,python-bidi
 orientation = portrait
 fullscreen = 0
 
-android.permissions = INTERNET
+p4a.branch = master
 
-android.api = 34
+android.api = 35
 android.minapi = 23
-android.sdk = 34
-android.ndk = 25b
+android.sdk = 35
+android.ndk = 27b
 
 android.skip_update = False
 android.accept_sdk_license = True
