@@ -103,7 +103,25 @@ jobs:
       - name: Build ZODIAC APK
         shell: bash
         run: |
+          set -eux
+
           . .buildenv/bin/activate
+
+          unset CC
+          unset CXX
+          unset CPP
+          unset CFLAGS
+          unset CXXFLAGS
+          unset LDFLAGS
+
+          export CC=clang
+          export CXX=clang++
+
+          echo "Compiler versions:"
+          clang --version
+          clang++ --version
+
+          echo "Starting ZODIAC build..."
           buildozer -v android debug
 
       - name: Upload APK
@@ -113,3 +131,4 @@ jobs:
           path: bin/*.apk
           if-no-files-found: error
           retention-days: 14
+
